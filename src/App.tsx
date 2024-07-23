@@ -101,7 +101,7 @@ function App() {
       console.error('No account address available')
       return
     }
-    
+
     try {
       console.log('writeContract params:', {
         address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
@@ -124,25 +124,22 @@ function App() {
 
   const handleTransactionWithWriteContracts = async () => {
     console.log('Initiating transaction with useWriteContracts')
+    if (!account.address) {
+      console.error('No account address available')
+      return
+    }
+    
     try {
-      console.log('writeContracts params:', {
+      const params = {
         contracts: [{
-          address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
+          address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C' as `0x${string}`,
           abi: ABI,
           functionName: 'mint',
-          args: [account.address], // Account address
+          args: [account.address, BigInt(1), BigInt(1), '0x' as `0x${string}`], // account address, id of the token we are minting, amount to mint, data
         }]
-      })
-      const result = await writeContracts({
-        contracts: [
-          {
-            address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
-            abi: ABI,
-            functionName: 'mint',
-            args: [account.address], // Account address
-          }
-        ]
-      })
+      };
+      console.log('writeContracts params:', params)
+      const result = await writeContracts(params)
       console.log('Transaction submitted with useWriteContracts:', result)
       console.log('writeContracts state:', { writeContractsData, writeContractsError, isWriteContractsPending, isWriteContractsSuccess })
     } catch (err) {
