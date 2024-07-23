@@ -77,14 +77,24 @@ const ABI = [
   },
 ] as const;
 
+type ContractCall = {
+  address: `0x${string}`;
+  abi: typeof ABI;
+  functionName: string;
+  args: any[];
+};
+
 function App() {
   const account = useAccount()
+
   const { connectors, connect, status, error: connectError } = useConnect()
+
   const { disconnect } = useDisconnect()
 
   const { writeContract, data: writeData, error: writeError, isPending: isWritePending, isSuccess: isWriteSuccess } = useWriteContract()
   
   const { writeContracts, data: writeContractsData, error: writeContractsError, isPending: isWriteContractsPending, isSuccess: isWriteContractsSuccess } = useWriteContracts()
+
 
   console.log('Account details:', {
     status: account.status,
@@ -115,6 +125,16 @@ function App() {
         functionName: 'mint',
         args: [account.address, BigInt(1), BigInt(1), '0x'], // account address, id of the token we are minting, amount to mint, data
       })
+
+      // if (result === undefined) {
+      //   console.log("Result undefined")
+      //   fallbackToIndividualCalls([{
+      //     address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
+      //     abi: ABI,
+      //     functionName: 'mint',
+      //     args: [account.address, BigInt(1), BigInt(1), '0x' as `0x${string}`],
+      //   }])
+      // }
       console.log('Transaction submitted with useWriteContract:', result)
       console.log('writeContract state:', { writeData, writeError, isWritePending, isWriteSuccess })
     } catch (err) {
@@ -129,21 +149,43 @@ function App() {
       return
     }
     
+    const contractCalls: ContractCall[] = [{
+      address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
+      abi: ABI,
+      functionName: 'mint',
+      args: [account.address, BigInt(1), BigInt(1), '0x' as `0x${string}`],
+    }];
+
     try {
-      const params = {
-        contracts: [{
-          address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C' as `0x${string}`,
+      console.log('writeContracts params:', { contracts: contractCalls })
+      const result = await writeContracts({ contracts: contractCalls })
+      if (result === undefined) {
+        console.log("Result undefined")
+        fallbackToIndividualCalls([{
+          address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
           abi: ABI,
           functionName: 'mint',
-          args: [account.address, BigInt(1), BigInt(1), '0x' as `0x${string}`], // account address, id of the token we are minting, amount to mint, data
-        }]
-      };
-      console.log('writeContracts params:', params)
-      const result = await writeContracts(params)
+          args: [account.address, BigInt(1), BigInt(1), '0x' as `0x${string}`],
+        }])
+      }
       console.log('Transaction submitted with useWriteContracts:', result)
       console.log('writeContracts state:', { writeContractsData, writeContractsError, isWriteContractsPending, isWriteContractsSuccess })
     } catch (err) {
       console.error('Transaction failed with useWriteContracts:', err)
+      console.log('Falling back to individual writeContract calls...')
+      await fallbackToIndividualCalls(contractCalls)
+    }
+  }
+
+  const fallbackToIndividualCalls = async (contracts: ContractCall[]) => {
+    for (const contract of contracts) {
+      try {
+        const result = await writeContract(contract)
+
+        console.log(`Individual transaction submitted for contract ${contract.address}:`, result)
+      } catch (err) {
+        console.error(`Individual transaction failed for contract ${contract.address}:`, err)
+      }
     }
   }
 
@@ -193,7 +235,7 @@ function App() {
             {writeError && <div>Transaction failed: {writeError.message}</div>}
           </div>
           <div>
-            <h3>useWriteContracts</h3>
+            <h3>useWriteContracts (with fallback)</h3>
             <button onClick={handleTransactionWithWriteContracts} disabled={isWriteContractsPending}>
               Send Transaction With useWriteContracts
             </button>
