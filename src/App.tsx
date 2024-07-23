@@ -2,16 +2,80 @@ import { useAccount, useConnect, useDisconnect, useWriteContract } from 'wagmi'
 import { useWriteContracts } from 'wagmi/experimental'
 import { parseEther } from 'viem'
 
-// Example ABI for a simple transfer function
+// Custom1155 ABI from BOAT - 0x6268A5F72528E5297e5A63B35e523E5C131cC88C
 const ABI = [
   {
-    inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }],
-    name: "transfer",
-    outputs: [{ name: "", type: "bool" }],
-    stateMutability: "nonpayable",
-    type: "function",
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
+    ],
+    name: 'mint',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
-]
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+    ],
+    name: 'balanceOf',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    name: 'uri',
+    outputs: [
+      {
+        internalType: 'string',
+        name: '',
+        type: 'string',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
 
 function App() {
   const account = useAccount()
@@ -22,33 +86,60 @@ function App() {
   
   const { writeContracts, data: writeContractsData, error: writeContractsError, isPending: isWriteContractsPending, isSuccess: isWriteContractsSuccess } = useWriteContracts()
 
+  console.log('Account details:', {
+    status: account.status,
+    address: account.address,
+    chainId: account.chainId,
+    isConnected: account.isConnected,
+    isReconnecting: account.isReconnecting,
+    isDisconnected: account.isDisconnected,
+  })
+
   const handleTransactionWithWriteContract = async () => {
+    console.log('Initiating transaction with useWriteContract')
     try {
-      const result = await writeContract({
-        address: '0x1234567890123456789012345678901234567890', // Replace with actual contract address
+      console.log('writeContract params:', {
+        address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
         abi: ABI,
-        functionName: 'transfer',
-        args: ['0x1234567890123456789012345678901234567890', parseEther('0.01')], // Replace with actual recipient address
+        functionName: 'mint',
+        args: ['0x6268A5F72528E5297e5A63B35e523E5C131cC88C', parseEther('0.01')],
+      })
+      const result = await writeContract({
+        address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
+        abi: ABI,
+        functionName: 'mint',
+        args: [`0x${account.address}`, BigInt(1), BigInt(1), '0x'], // account address, id of the token we are minting, amount to mint, data
       })
       console.log('Transaction submitted with useWriteContract:', result)
+      console.log('writeContract state:', { writeData, writeError, isWritePending, isWriteSuccess })
     } catch (err) {
       console.error('Transaction failed with useWriteContract:', err)
     }
   }
 
   const handleTransactionWithWriteContracts = async () => {
+    console.log('Initiating transaction with useWriteContracts')
     try {
+      console.log('writeContracts params:', {
+        contracts: [{
+          address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
+          abi: ABI,
+          functionName: 'mint',
+          args: [account.address], // Account address
+        }]
+      })
       const result = await writeContracts({
         contracts: [
           {
-            address: '0x1234567890123456789012345678901234567890', // Replace with actual contract address
+            address: '0x6268A5F72528E5297e5A63B35e523E5C131cC88C',
             abi: ABI,
-            functionName: 'transfer',
-            args: ['0x1234567890123456789012345678901234567890', parseEther('0.01')], // Replace with actual recipient address
+            functionName: 'mint',
+            args: [account.address], // Account address
           }
         ]
       })
       console.log('Transaction submitted with useWriteContracts:', result)
+      console.log('writeContracts state:', { writeContractsData, writeContractsError, isWriteContractsPending, isWriteContractsSuccess })
     } catch (err) {
       console.error('Transaction failed with useWriteContracts:', err)
     }
